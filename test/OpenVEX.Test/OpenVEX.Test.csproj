@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+  <PropertyGroup Label="Build">
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Update="Resources\*" CopyToOutputDirectory="PreserveNewest" />
+  <ItemGroup Label="Resources">
+    <None Update="Resources\*" CopyToOutputDirectory="PreserveNewest"/>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\OpenVEX\OpenVEX.csproj" />
+  <ItemGroup Label="Project References">
+    <ProjectReference Include="..\..\src\OpenVEX\OpenVEX.csproj"/>
   </ItemGroup>
 
 </Project>

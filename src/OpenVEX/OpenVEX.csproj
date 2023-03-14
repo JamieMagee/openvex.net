@@ -1,11 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+  <PropertyGroup Label="Build">
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Macross.Json.Extensions" Version="3.0.0" />
+  <PropertyGroup Label="Package">
+    <Product>OpenVEX</Product>
+    <Description>.NET types for OpenVEX documents</Description>
+    <PackageTags>VEX;OpenVEX;SBOM</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup Label="Package References">
+    <PackageReference Include="Macross.Json.Extensions" Version="3.0.0"/>
   </ItemGroup>
 
 </Project>
