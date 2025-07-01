@@ -1,0 +1,55 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/example/vex-comprehensive",
+  "author": "security@example.com",
+  "role": "Security Team",
+  "timestamp": "2023-01-16T19:07:16.853479631-06:00",
+  "last_updated": "2023-01-17T10:15:30.123456789-06:00",
+  "version": "2",
+  "tooling": "VEX Generator v1.0.0",
+  "statements": [
+    {
+      "@id": "https://openvex.dev/statements/stmt-001",
+      "version": 1,
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+        "name": "CVE-2021-44228",
+        "description": "Remote code injection in Log4j",
+        "aliases": [
+          "GHSA-jfh8-c2jp-5v3q",
+          "log4shell"
+        ]
+      },
+      "timestamp": "2023-01-16T19:07:16.853479631-06:00",
+      "last_updated": "2023-01-17T09:30:00.000000000-06:00",
+      "products": [
+        {
+          "@id": "pkg:maven/org.springframework.boot/spring-boot@2.6.0-M3",
+          "identifiers": {
+            "purl": "pkg:maven/org.springframework.boot/spring-boot@2.6.0-M3",
+            "cpe23": "cpe:2.3:a:pivotal:spring_boot:2.6.0:milestone3:*:*:*:*:*:*"
+          },
+          "hashes": {
+            "sha-256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "subcomponents": [
+            {
+              "@id": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+              "identifiers": {
+                "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1"
+              },
+              "hashes": {
+                "sha-256": "402fa523b96591d4450ace90e32d9f779fcfd938903e1c5bf9d3701860b8f856"
+              }
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "supplier": "Pivotal Software Inc.",
+      "status_notes": "Spring Boot users are only affected if they have switched the default logging system to Log4J2.",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The log4j-to-slf4j and log4j-api jars included in spring-boot-starter-logging cannot be exploited on their own. Only applications using log4j-core and including user input in log messages are vulnerable."
+    }
+  ]
+}

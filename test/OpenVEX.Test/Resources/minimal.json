@@ -1,5 +1,5 @@
 {
-  "@context": "https://openvex.dev/ns",
+  "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/example/vex-9fb3463de1b57",
   "author": "Wolfi J Inkinson",
   "role": "Document Creator",
@@ -7,10 +7,16 @@
   "version": "1",
   "statements": [
     {
-      "vulnerability": "CVE-2023-12345",
+      "vulnerability": {
+        "name": "CVE-2023-12345"
+      },
       "products": [
-        "pkg:apk/wolfi/git@2.39.0-r1?arch=armv7",
-        "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64"
+        {
+          "@id": "pkg:apk/wolfi/git@2.39.0-r1?arch=armv7"
+        },
+        {
+          "@id": "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64"
+        }
       ],
       "status": "fixed"
     }
