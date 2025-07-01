@@ -44,19 +44,19 @@ public class VexTests
             AuthorRole = "Document Creator",
             Timestamp = Timestamp,
             Version = "1",
-            Statements = new[]
-            {
+            Statements =
+            [
                 new Statement
                 {
                     Vulnerability = "CVE-2023-12345",
-                    Products = new[]
-                    {
+                    Products =
+                    [
                         "pkg:apk/wolfi/git@2.39.0-r1?arch=armv7",
                         "pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64",
-                    },
+                    ],
                     Status = Status.Fixed,
                 },
-            },
+            ],
         };
 
         var json = JsonSerializer.Serialize(vex);
