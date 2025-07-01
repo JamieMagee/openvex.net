@@ -19,11 +19,8 @@ env:
 
 jobs:
   build:
-    name: Build-${{matrix.os}}
-    runs-on: ${{matrix.os}}
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest, macOS-latest ]
+    name: Build
+    runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -33,22 +30,29 @@ jobs:
       - name: "Install .NET Core SDK"
         uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
 
-      - name: "Dotnet Tool Restore"
-        run: dotnet tool restore
+      - name: "Clean"
+        run: dotnet clean
 
-      - name: "Dotnet Cake Build"
-        run: dotnet cake --target=Build
+      - name: "Restore"
+        run: dotnet restore
 
-      - name: "Dotnet Cake Test"
-        run: dotnet cake --target=Test
+      - name: "Build"
+        run: dotnet build --configuration Release --no-restore
 
-      - name: "Dotnet Cake Pack"
-        run: dotnet cake --target=Pack
+      - name: "Test"
+        run: dotnet test --configuration Release --no-build --no-restore
+
+      - name: "Pack"
+        run: |
+          mkdir -p ./artifacts
+          dotnet pack --configuration Release --no-build --no-restore \
+            --include-symbols \
+            --output ./artifacts
 
       - name: "Publish artifacts"
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: ${{matrix.os}}
+          name: build-artifacts
           path: "./artifacts"
 
   push-github-packages:
@@ -60,18 +64,17 @@ jobs:
       url: https://github.com/JamieMagee/openvex.net/packages
     permissions:
       packages: write
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: "Download Artifact"
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: "windows-latest"
+          name: "build-artifacts"
       - name: "Dotnet NuGet Add Source"
         run: dotnet nuget add source https://nuget.pkg.github.com/JamieMagee/index.json --name GitHub --username JamieMagee --password ${{secrets.GITHUB_TOKEN}}
-        shell: pwsh
+
       - name: "Dotnet NuGet Push"
         run: dotnet nuget push .\*.nupkg --api-key ${{ github.token }} --source GitHub --skip-duplicate
-        shell: pwsh
 
   push-nuget:
     name: "Push NuGet Packages"
@@ -80,12 +83,13 @@ jobs:
     environment:
       name: "NuGet"
       url: https://www.nuget.org/packages/osv
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: "Download Artifact"
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: "windows-latest"
+          name: "build-artifacts"
+
       - name: "Dotnet NuGet Push"
         run: |
           Get-ChildItem .\ -Filter *.nupkg |

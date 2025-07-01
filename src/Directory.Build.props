@@ -18,10 +18,6 @@
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
 
-  <ItemGroup Label="Package References">
-    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" Version="8.0.0"/>
-  </ItemGroup>
-
   <ItemGroup Label="Files">
     <None Include="..\..\README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
