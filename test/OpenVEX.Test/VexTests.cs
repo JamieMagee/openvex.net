@@ -2,7 +2,7 @@ namespace OpenVEX.Test;
 
 using System.Reflection;
 using System.Text.Json;
-using FluentAssertions;
+using AwesomeAssertions;
 
 public class VexTests
 {
@@ -16,7 +16,7 @@ public class VexTests
     {
         var input = GetResource("minimal.json");
 
-        var vex = JsonSerializer.Deserialize<Vex>(input)!;
+        var vex = JsonSerializer.Deserialize<Vex>(input);
 
         vex.Should().NotBeNull();
         vex.Context.Should().Be("https://openvex.dev/ns/v0.2.0");
@@ -31,7 +31,7 @@ public class VexTests
         statement.Vulnerability.Name.Should().Be("CVE-2023-12345");
         statement.Status.Should().Be(Status.Fixed);
         statement.Products.Should().HaveCount(2);
-        statement.Products!.Select(p => p.Id).Should().Contain("pkg:apk/wolfi/git@2.39.0-r1?arch=armv7").And
+        statement.Products.Select(p => p.Id).Should().Contain("pkg:apk/wolfi/git@2.39.0-r1?arch=armv7").And
             .Contain("pkg:apk/wolfi/git@2.39.0-r1?arch=x86_64");
     }
 
@@ -71,7 +71,7 @@ public class VexTests
     {
         var input = GetResource("comprehensive.json");
 
-        var vex = JsonSerializer.Deserialize<Vex>(input)!;
+        var vex = JsonSerializer.Deserialize<Vex>(input);
 
         vex.Should().NotBeNull();
         vex.Context.Should().Be("https://openvex.dev/ns/v0.2.0");
@@ -100,21 +100,21 @@ public class VexTests
         statement.LastUpdated.Should().BeExactly(new DateTimeOffset(2023, 1, 17, 9, 30, 0, TimeSpan.FromHours(-6)));
 
         statement.Products.Should().HaveCount(1);
-        var product = statement.Products!.Single();
+        var product = statement.Products.Single();
         product.Id.Should().Be("pkg:maven/org.springframework.boot/spring-boot@2.6.0-M3");
         product.Identifiers.Should().HaveCount(2);
-        product.Identifiers!["purl"].Should().Be("pkg:maven/org.springframework.boot/spring-boot@2.6.0-M3");
+        product.Identifiers["purl"].Should().Be("pkg:maven/org.springframework.boot/spring-boot@2.6.0-M3");
         product.Identifiers["cpe23"].Should().Be("cpe:2.3:a:pivotal:spring_boot:2.6.0:milestone3:*:*:*:*:*:*");
         product.Hashes.Should().HaveCount(1);
-        product.Hashes!["sha-256"].Should().Be("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+        product.Hashes["sha-256"].Should().Be("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
 
         product.Subcomponents.Should().HaveCount(1);
-        var subcomponent = product.Subcomponents!.Single();
+        var subcomponent = product.Subcomponents.Single();
         subcomponent.Id.Should().Be("pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1");
         subcomponent.Identifiers.Should().HaveCount(1);
-        subcomponent.Identifiers!["purl"].Should().Be("pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1");
+        subcomponent.Identifiers["purl"].Should().Be("pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1");
         subcomponent.Hashes.Should().HaveCount(1);
-        subcomponent.Hashes!["sha-256"].Should().Be("402fa523b96591d4450ace90e32d9f779fcfd938903e1c5bf9d3701860b8f856");
+        subcomponent.Hashes["sha-256"].Should().Be("402fa523b96591d4450ace90e32d9f779fcfd938903e1c5bf9d3701860b8f856");
 
         statement.Status.Should().Be(Status.NotAffected);
         statement.Supplier.Should().Be("Pivotal Software Inc.");
