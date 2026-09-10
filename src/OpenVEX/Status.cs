@@ -4,6 +4,7 @@ namespace OpenVEX;
 /// Status describes the exploitability status of a component with respect to a vulnerability.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumMemberConverter))]
+[JsonStringEnumMemberConverterOptions(allowIntegerValues: false)]
 public enum Status
 {
     /// <summary>

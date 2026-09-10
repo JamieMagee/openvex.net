@@ -50,7 +50,7 @@ var vex = new Vex
     Author = "security@example.com",
     AuthorRole = "Security Team",
     Timestamp = DateTimeOffset.UtcNow,
-    Version = "1",
+    Version = 1,
     Statements = new[]
     {
         new Statement
@@ -67,6 +67,17 @@ var vex = new Vex
     }
 };
 
+var validation = vex.Validate();
+if (!validation.IsValid)
+{
+    foreach (var error in validation.Errors)
+    {
+        Console.Error.WriteLine($"{error.Path}: {error.Message}");
+    }
+
+    return;
+}
+
 // Serialize to JSON
 var json = JsonSerializer.Serialize(vex, new JsonSerializerOptions { WriteIndented = true });
 Console.WriteLine(json);
@@ -80,7 +91,19 @@ using System.Text.Json;
 
 // Deserialize from JSON
 var json = File.ReadAllText("my-vex-document.json");
-var vex = JsonSerializer.Deserialize<Vex>(json);
+var vex = JsonSerializer.Deserialize<Vex>(json)
+    ?? throw new JsonException("The document was empty.");
+
+var validation = vex.Validate();
+if (!validation.IsValid)
+{
+    foreach (var error in validation.Errors)
+    {
+        Console.Error.WriteLine($"{error.Path}: {error.Message}");
+    }
+
+    return;
+}
 
 // Access the data
 Console.WriteLine($"VEX Document: {vex.Id}");
@@ -97,6 +120,14 @@ foreach (var statement in vex.Statements)
     }
 }
 ```
+
+### Validation and compatibility
+
+`Validate()` checks the document against the OpenVEX 0.2.0 schema and returns all errors it finds. Serialization and deserialization do not run validation automatically.
+
+The JSON reader ignores unknown properties and treats status and justification labels case-insensitively. `version` must be a JSON integer, so values such as `"version": "1"` are rejected.
+
+`DateTimeOffset` stores up to seven fractional-second digits. It can read timestamps with greater precision, but drops the extra digits when serializing them again.
 
 ### VEX Statement Statuses
 

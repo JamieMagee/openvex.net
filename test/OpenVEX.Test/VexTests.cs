@@ -1,7 +1,7 @@
 namespace OpenVEX.Test;
 
-using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using AwesomeAssertions;
 
 public class VexTests
@@ -14,7 +14,7 @@ public class VexTests
     [Fact]
     public void Should_Deserialize()
     {
-        var input = GetResource("minimal.json");
+        var input = TestResources.Get("minimal.json");
 
         var vex = JsonSerializer.Deserialize<Vex>(input);
 
@@ -25,7 +25,7 @@ public class VexTests
         vex.AuthorRole.Should().Be("Document Creator");
         vex.Timestamp.Should()
             .BeExactly(Timestamp);
-        vex.Version.Should().Be("1");
+        vex.Version.Should().Be(1);
         vex.Statements.Should().HaveCount(1);
         var statement = vex.Statements.Single();
         statement.Vulnerability.Name.Should().Be("CVE-2023-12345");
@@ -43,9 +43,8 @@ public class VexTests
             Context = "https://openvex.dev/ns/v0.2.0",
             Id = "https://openvex.dev/docs/example/vex-9fb3463de1b57",
             Author = "Wolfi J Inkinson",
-            AuthorRole = "Document Creator",
             Timestamp = Timestamp,
-            Version = "1",
+            Version = 1,
             Statements =
             [
                 new Statement
@@ -63,13 +62,31 @@ public class VexTests
 
         var json = JsonSerializer.Serialize(vex);
 
-        json.Should().NotBeNull();
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        root.GetProperty("version").ValueKind.Should().Be(JsonValueKind.Number);
+        root.GetProperty("version").GetInt32().Should().Be(1);
+        root.TryGetProperty("role", out _).Should().BeFalse();
+        root.TryGetProperty("last_updated", out _).Should().BeFalse();
+        root.TryGetProperty("tooling", out _).Should().BeFalse();
+
+        var statement = root.GetProperty("statements")[0];
+        var vulnerability = statement.GetProperty("vulnerability");
+        vulnerability.TryGetProperty("@id", out _).Should().BeFalse();
+        vulnerability.TryGetProperty("description", out _).Should().BeFalse();
+        vulnerability.TryGetProperty("aliases", out _).Should().BeFalse();
+
+        var product = statement.GetProperty("products")[0];
+        product.TryGetProperty("identifiers", out _).Should().BeFalse();
+        product.TryGetProperty("hashes", out _).Should().BeFalse();
+        product.TryGetProperty("subcomponents", out _).Should().BeFalse();
     }
 
     [Fact]
     public void Should_Deserialize_Comprehensive_Format()
     {
-        var input = GetResource("comprehensive.json");
+        var input = TestResources.Get("comprehensive.json");
 
         var vex = JsonSerializer.Deserialize<Vex>(input);
 
@@ -80,7 +97,7 @@ public class VexTests
         vex.AuthorRole.Should().Be("Security Team");
         vex.Timestamp.Should().BeExactly(new DateTimeOffset(2023, 1, 16, 19, 7, 16, 853, TimeSpan.FromHours(-6)).AddTicks(4796));
         vex.LastUpdated.Should().BeExactly(new DateTimeOffset(2023, 1, 17, 10, 15, 30, 123, TimeSpan.FromHours(-6)).AddTicks(4567));
-        vex.Version.Should().Be("2");
+        vex.Version.Should().Be(2);
         vex.Tooling.Should().Be("VEX Generator v1.0.0");
 
         vex.Statements.Should().HaveCount(1);
@@ -134,7 +151,7 @@ public class VexTests
             AuthorRole = "Security Team",
             Timestamp = new DateTimeOffset(2023, 1, 16, 19, 7, 16, 853, TimeSpan.FromHours(-6)).AddTicks(4796),
             LastUpdated = new DateTimeOffset(2023, 1, 17, 10, 15, 30, 123, TimeSpan.FromHours(-6)).AddTicks(4567),
-            Version = "2",
+            Version = 2,
             Tooling = "VEX Generator v1.0.0",
             Statements =
             [
@@ -203,10 +220,61 @@ public class VexTests
         json.Should().Contain("\"subcomponents\":");
     }
 
-    private static string GetResource(string resource)
+    [Fact]
+    public void Should_Reject_String_Version()
     {
-        var directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-        var path = Path.Combine(directory!, "Resources", resource);
-        return File.ReadAllText(path);
+        var document = JsonNode.Parse(TestResources.Get("minimal.json"))!.AsObject();
+        document["version"] = "1";
+
+        var deserialize = () => JsonSerializer.Deserialize<Vex>(document.ToJsonString());
+
+        deserialize.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Should_Require_Timestamp()
+    {
+        var document = JsonNode.Parse(TestResources.Get("minimal.json"))!.AsObject();
+        document.Remove("timestamp");
+
+        var deserialize = () => JsonSerializer.Deserialize<Vex>(document.ToJsonString());
+
+        deserialize.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Should_Reject_Numeric_Enum_Values()
+    {
+        var deserializeStatus = () => JsonSerializer.Deserialize<Status>("0");
+        var deserializeJustification = () => JsonSerializer.Deserialize<Justification>("0");
+        var serializeUndefinedStatus = () => JsonSerializer.Serialize((Status)99);
+
+        deserializeStatus.Should().Throw<JsonException>();
+        deserializeJustification.Should().Throw<JsonException>();
+        serializeUndefinedStatus.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Should_Read_Case_Insensitive_Enums_And_Write_Schema_Labels()
+    {
+        JsonSerializer.Deserialize<Status>("\"FIXED\"").Should().Be(Status.Fixed);
+        JsonSerializer.Deserialize<Justification>("\"COMPONENT_NOT_PRESENT\"").Should()
+            .Be(Justification.ComponentNotPresent);
+        JsonSerializer.Serialize(Status.NotAffected).Should().Be("\"not_affected\"");
+        JsonSerializer.Serialize(Justification.VulnerableCodeNotPresent).Should()
+            .Be("\"vulnerable_code_not_present\"");
+    }
+
+    [Fact]
+    public void Should_Ignore_Unknown_Properties()
+    {
+        var document = JsonNode.Parse(TestResources.Get("minimal.json"))!.AsObject();
+        document["extension"] = true;
+        document["statements"]!.AsArray()[0]!.AsObject()["extension"] = true;
+
+        var vex = JsonSerializer.Deserialize<Vex>(document.ToJsonString());
+
+        vex.Should().NotBeNull();
+        vex.Statements.Single().Status.Should().Be(Status.Fixed);
     }
 }
