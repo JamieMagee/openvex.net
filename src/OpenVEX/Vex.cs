@@ -31,18 +31,20 @@ public sealed record Vex
     /// Role describes the role of the document author.
     /// </summary>
     [JsonPropertyName("role")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? AuthorRole { get; init; }
 
     /// <summary>
     /// Timestamp defines the time at which the document was issued.
     /// </summary>
     [JsonPropertyName("timestamp")]
-    public DateTimeOffset Timestamp { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
 
     /// <summary>
     /// Date of last modification to the document.
     /// </summary>
     [JsonPropertyName("last_updated")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DateTimeOffset? LastUpdated { get; init; }
 
     /// <summary>
@@ -50,13 +52,14 @@ public sealed record Vex
     /// It must be incremented when any content within the VEX document changes, including any VEX statements included within the VEX document.
     /// </summary>
     [JsonPropertyName("version")]
-    public required string Version { get; init; }
+    public required int Version { get; init; }
 
     /// <summary>
     /// Tooling expresses how the VEX document and contained VEX statements were generated.
     /// It may specify tools or automated processes used in the document or statement generation.
     /// </summary>
     [JsonPropertyName("tooling")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Tooling { get; init; }
 
     /// <summary>
@@ -65,4 +68,10 @@ public sealed record Vex
     /// </summary>
     [JsonPropertyName("statements")]
     public required IEnumerable<Statement> Statements { get; init; }
+
+    /// <summary>
+    /// Checks this document against the OpenVEX 0.2.0 JSON schema.
+    /// </summary>
+    /// <returns>All validation errors found in the document.</returns>
+    public VexValidationResult Validate() => VexValidator.Validate(this);
 }

@@ -10,23 +10,27 @@ public sealed record Product
     /// Optional IRI identifying the component to make it externally referenceable.
     /// </summary>
     [JsonPropertyName("@id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Id { get; init; }
 
     /// <summary>
     /// A map of software identifiers where the key is the type and the value the identifier. OpenVEX favors the use of purl but others are recognized.
     /// </summary>
     [JsonPropertyName("identifiers")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IDictionary<string, string>? Identifiers { get; init; }
 
     /// <summary>
     /// Map of cryptographic hashes of the component. The key is the algorithm name based on the Hash Function Textual Names from IANA.
     /// </summary>
     [JsonPropertyName("hashes")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IDictionary<string, string>? Hashes { get; init; }
 
     /// <summary>
     /// List of component structs describing the subcomponents subject of the VEX statement.
     /// </summary>
     [JsonPropertyName("subcomponents")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IEnumerable<Component>? Subcomponents { get; init; }
 }

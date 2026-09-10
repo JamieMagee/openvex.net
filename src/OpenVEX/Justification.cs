@@ -4,6 +4,7 @@ namespace OpenVEX;
 /// Justification describes why a given component is not affected by a vulnerability.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumMemberConverter))]
+[JsonStringEnumMemberConverterOptions(allowIntegerValues: false)]
 public enum Justification
 {
     /// <summary>

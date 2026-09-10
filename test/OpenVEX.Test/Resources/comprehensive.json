@@ -5,7 +5,7 @@
   "role": "Security Team",
   "timestamp": "2023-01-16T19:07:16.853479631-06:00",
   "last_updated": "2023-01-17T10:15:30.123456789-06:00",
-  "version": "2",
+  "version": 2,
   "tooling": "VEX Generator v1.0.0",
   "statements": [
     {

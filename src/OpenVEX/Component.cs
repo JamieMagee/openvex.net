@@ -10,6 +10,7 @@ public sealed record Component
     /// Optional IRI identifying the component to make it externally referenceable.
     /// </summary>
     [JsonPropertyName("@id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Id { get; init; }
 
     /// <summary>
@@ -17,6 +18,7 @@ public sealed record Component
     /// OpenVEX favors the use of purl but others are recognized.
     /// </summary>
     [JsonPropertyName("identifiers")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IDictionary<string, string>? Identifiers { get; init; }
 
     /// <summary>
@@ -24,5 +26,6 @@ public sealed record Component
     /// The key is the algorithm name based on the Hash Function Textual Names from IANA.
     /// </summary>
     [JsonPropertyName("hashes")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IDictionary<string, string>? Hashes { get; init; }
 }
