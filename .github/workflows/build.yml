@@ -82,7 +82,7 @@ jobs:
     if: github.event_name == 'release'
     environment:
       name: "NuGet"
-      url: https://www.nuget.org/packages/osv
+      url: https://www.nuget.org/packages/OpenVEX
     permissions:
       contents: read
       id-token: write
