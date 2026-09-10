@@ -1,5 +1,7 @@
 namespace OpenVEX;
 
+using System.Text.Json;
+
 /// <summary>
 /// Checks OpenVEX documents against the OpenVEX 0.2.0 JSON schema.
 /// </summary>
@@ -44,8 +46,8 @@ internal static class VexValidator
 
     private static void ValidateDocument(Vex document, ValidationContext context)
     {
-        ValidateRequiredAbsoluteUri(document.Context, "$['@context']", context);
-        ValidateRequiredAbsoluteUri(document.Id, "$['@id']", context);
+        ValidateRequiredUri(document.Context, "$['@context']", context);
+        ValidateRequiredIri(document.Id, "$['@id']", context);
 
         if (document.Author is null)
         {
@@ -77,24 +79,26 @@ internal static class VexValidator
             if (statement is null)
             {
                 context.Add(path, "Statement must not be null.");
-                continue;
+            }
+            else
+            {
+                ValidateStatement(statement, path, context);
             }
 
-            ValidateStatement(statement, path, context);
+            ValidateDuplicateAtIndex(
+                statements,
+                index,
+                "$.statements",
+                context,
+                (left, right) => StatementEquals(left, right, context));
         }
-
-        ValidateUnique(
-            statements,
-            "$.statements",
-            context,
-            (left, right) => StatementEquals(left, right, context));
     }
 
     private static void ValidateStatement(Statement statement, string path, ValidationContext context)
     {
         if (statement.Id is not null)
         {
-            ValidateAbsoluteUri(statement.Id, $"{path}['@id']", context);
+            ValidateIri(statement.Id, $"{path}['@id']", context);
         }
 
         if (statement.Version is < 1)
@@ -148,17 +152,19 @@ internal static class VexValidator
             if (product is null)
             {
                 context.Add(productPath, "Product must not be null.");
-                continue;
+            }
+            else
+            {
+                ValidateProduct(product, productPath, context);
             }
 
-            ValidateProduct(product, productPath, context);
+            ValidateDuplicateAtIndex(
+                products,
+                index,
+                $"{path}.products",
+                context,
+                (left, right) => ProductEquals(left, right, context));
         }
-
-        ValidateUnique(
-            products,
-            $"{path}.products",
-            context,
-            (left, right) => ProductEquals(left, right, context));
     }
 
     private static void ValidateVulnerability(
@@ -168,7 +174,7 @@ internal static class VexValidator
     {
         if (vulnerability.Id is not null)
         {
-            ValidateAbsoluteUri(vulnerability.Id, $"{path}['@id']", context);
+            ValidateIri(vulnerability.Id, $"{path}['@id']", context);
         }
 
         if (vulnerability.Name is null)
@@ -188,13 +194,14 @@ internal static class VexValidator
             {
                 context.Add($"{path}.aliases[{index}]", "Alias must not be null.");
             }
-        }
 
-        ValidateUnique(
-            aliases,
-            $"{path}.aliases",
-            context,
-            static (left, right) => string.Equals(left, right, StringComparison.Ordinal));
+            ValidateDuplicateAtIndex(
+                aliases,
+                index,
+                $"{path}.aliases",
+                context,
+                static (left, right) => string.Equals(left, right, StringComparison.Ordinal));
+        }
     }
 
     private static void ValidateProduct(Product product, string path, ValidationContext context)
@@ -215,17 +222,19 @@ internal static class VexValidator
             if (subcomponent is null)
             {
                 context.Add(subcomponentPath, "Subcomponent must not be null.");
-                continue;
+            }
+            else
+            {
+                ValidateComponent(subcomponent, subcomponentPath, context);
             }
 
-            ValidateComponent(subcomponent, subcomponentPath, context);
+            ValidateDuplicateAtIndex(
+                subcomponents,
+                index,
+                $"{path}.subcomponents",
+                context,
+                ComponentEquals);
         }
-
-        ValidateUnique(
-            subcomponents,
-            $"{path}.subcomponents",
-            context,
-            ComponentEquals);
     }
 
     private static void ValidateComponent(Component component, string path, ValidationContext context) =>
@@ -240,7 +249,7 @@ internal static class VexValidator
     {
         if (id is not null)
         {
-            ValidateAbsoluteUri(id, $"{path}['@id']", context);
+            ValidateIri(id, $"{path}['@id']", context);
         }
 
         if (id is null && identifiers is null)
@@ -310,7 +319,7 @@ internal static class VexValidator
         }
     }
 
-    private static void ValidateRequiredAbsoluteUri(
+    private static void ValidateRequiredUri(
         string? value,
         string path,
         ValidationContext context)
@@ -321,45 +330,69 @@ internal static class VexValidator
             return;
         }
 
-        ValidateAbsoluteUri(value, path, context);
+        ValidateUri(value, path, context);
     }
 
-    private static void ValidateAbsoluteUri(string value, string path, ValidationContext context)
+    private static void ValidateRequiredIri(
+        string? value,
+        string path,
+        ValidationContext context)
     {
-        if (!Uri.TryCreate(value, UriKind.Absolute, out _) ||
-            !Uri.IsWellFormedUriString(value, UriKind.Absolute))
+        if (value is null)
         {
-            context.Add(path, "Value must be a valid absolute URI or IRI.");
+            context.Add(path, "Value is required.");
+            return;
+        }
+
+        ValidateIri(value, path, context);
+    }
+
+    private static void ValidateUri(string value, string path, ValidationContext context)
+    {
+        if (!value.All(static character => character <= 0x7f) ||
+            !IsWellFormedAbsoluteUri(value))
+        {
+            context.Add(path, "Value must be a valid absolute RFC 3986 URI.");
         }
     }
 
-    private static void ValidateUnique<T>(
+    private static void ValidateIri(string value, string path, ValidationContext context)
+    {
+        if (!IsWellFormedAbsoluteUri(value))
+        {
+            context.Add(path, "Value must be a valid absolute IRI.");
+        }
+    }
+
+    private static bool IsWellFormedAbsoluteUri(string value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out _) &&
+        Uri.IsWellFormedUriString(value, UriKind.Absolute);
+
+    private static void ValidateDuplicateAtIndex<T>(
         IReadOnlyList<T> items,
+        int index,
         string path,
         ValidationContext context,
         Func<T, T, bool> equals)
         where T : class
     {
-        for (var index = 0; index < items.Count; index++)
+        for (var previousIndex = 0; previousIndex < index; previousIndex++)
         {
-            for (var previousIndex = 0; previousIndex < index; previousIndex++)
+            var item = items[index];
+            var previous = items[previousIndex];
+            var areEqual = item is null
+                ? previous is null
+                : previous is not null && equals(item, previous);
+
+            if (!areEqual)
             {
-                var item = items[index];
-                var previous = items[previousIndex];
-                var areEqual = item is null
-                    ? previous is null
-                    : previous is not null && equals(item, previous);
-
-                if (!areEqual)
-                {
-                    continue;
-                }
-
-                context.Add(
-                    $"{path}[{index}]",
-                    $"Item duplicates {path}[{previousIndex}], but items must be unique.");
-                break;
+                continue;
             }
+
+            context.Add(
+                $"{path}[{index}]",
+                $"Item duplicates {path}[{previousIndex}], but items must be unique.");
+            break;
         }
     }
 
@@ -370,8 +403,8 @@ internal static class VexValidator
         string.Equals(left.Id, right.Id, StringComparison.Ordinal) &&
             left.Version == right.Version &&
             ObjectEquals(left.Vulnerability, right.Vulnerability, (x, y) => VulnerabilityEquals(x, y, context)) &&
-            left.Timestamp == right.Timestamp &&
-            left.LastUpdated == right.LastUpdated &&
+            DateTimeOffsetEqualsExact(left.Timestamp, right.Timestamp) &&
+            DateTimeOffsetEqualsExact(left.LastUpdated, right.LastUpdated) &&
             SequenceEquals(
                 context.Materialize(left.Products),
                 context.Materialize(right.Products),
@@ -382,7 +415,7 @@ internal static class VexValidator
             left.Justification == right.Justification &&
             string.Equals(left.ImpactStatement, right.ImpactStatement, StringComparison.Ordinal) &&
             string.Equals(left.ActionStatement, right.ActionStatement, StringComparison.Ordinal) &&
-            left.ActionStatementTimestamp == right.ActionStatementTimestamp;
+            DateTimeOffsetEqualsExact(left.ActionStatementTimestamp, right.ActionStatementTimestamp);
 
     private static bool VulnerabilityEquals(
         Vulnerability left,
@@ -409,6 +442,12 @@ internal static class VexValidator
         string.Equals(left.Id, right.Id, StringComparison.Ordinal) &&
             DictionaryEquals(left.Identifiers, right.Identifiers) &&
             DictionaryEquals(left.Hashes, right.Hashes);
+
+    private static bool DateTimeOffsetEqualsExact(
+        DateTimeOffset? left,
+        DateTimeOffset? right) =>
+        left.HasValue == right.HasValue &&
+        (!left.HasValue || left.Value.EqualsExact(right.GetValueOrDefault()));
 
     private static bool DictionaryEquals(
         IDictionary<string, string>? left,
@@ -482,7 +521,7 @@ internal static class VexValidator
     }
 
     private static string DictionaryPath(string path, string key) =>
-        $"{path}['{key.Replace("'", "\\'", StringComparison.Ordinal)}']";
+        $"{path}[{JsonSerializer.Serialize(key)}]";
 
     private sealed class ValidationContext
     {

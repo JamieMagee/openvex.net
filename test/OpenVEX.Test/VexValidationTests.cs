@@ -129,10 +129,10 @@ public class VexValidationTests
 
         paths.Should().Contain(
             [
-                "$.statements[0].products[0].identifiers['npm']",
-                "$.statements[0].products[0].identifiers['purl']",
-                "$.statements[0].products[0].hashes['sha256']",
-                "$.statements[0].products[0].hashes['sha-256']",
+                "$.statements[0].products[0].identifiers[\"npm\"]",
+                "$.statements[0].products[0].identifiers[\"purl\"]",
+                "$.statements[0].products[0].hashes[\"sha256\"]",
+                "$.statements[0].products[0].hashes[\"sha-256\"]",
                 "$.statements[0].products[0].subcomponents[0]",
                 "$.statements[0].products[1]",
                 "$.statements[0].products[2].identifiers",
@@ -179,6 +179,127 @@ public class VexValidationTests
                 "$.statements[0].products[0]['@id']",
                 "$.statements[0].products[0].subcomponents[0]['@id']",
             ]);
+    }
+
+    [Fact]
+    public void Should_Distinguish_Uri_And_Iri_Formats()
+    {
+        var invalidUri = CreateValidDocument() with
+        {
+            Context = "https://example.com/世界",
+        };
+        var validUriAndIri = CreateValidDocument() with
+        {
+            Context = "https://example.com/%E4%B8%96%E7%95%8C",
+            Id = "https://example.com/世界",
+        };
+
+        var invalidResult = invalidUri.Validate();
+        var validResult = validUriAndIri.Validate();
+
+        invalidResult.Errors.Select(error => error.Path).Should().Contain("$['@context']");
+        validResult.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Should_Compare_Timestamps_By_Serialized_Value()
+    {
+        var first = new DateTimeOffset(2026, 9, 10, 12, 0, 0, TimeSpan.Zero);
+        var second = new DateTimeOffset(2026, 9, 10, 14, 0, 0, TimeSpan.FromHours(2));
+        var statement = new Statement
+        {
+            Vulnerability = new Vulnerability { Name = "CVE-2026-0001" },
+            Timestamp = first,
+            LastUpdated = first,
+            ActionStatementTimestamp = first,
+            Status = Status.Fixed,
+        };
+        var variants = new[]
+        {
+            statement with { Timestamp = second },
+            statement with { LastUpdated = second },
+            statement with { ActionStatementTimestamp = second },
+        };
+        var duplicateDocument = CreateValidDocument() with
+        {
+            Statements = [statement, statement with { }],
+        };
+
+        foreach (var variant in variants)
+        {
+            var document = CreateValidDocument() with
+            {
+                Statements = [statement, variant],
+            };
+
+            document.Validate().IsValid.Should().BeTrue();
+        }
+
+        duplicateDocument.Validate().Errors.Select(error => error.Path).Should()
+            .Contain("$.statements[1]");
+    }
+
+    [Fact]
+    public void Should_Escape_Dictionary_Keys_In_Error_Paths()
+    {
+        const string key = "line1\\line2\nline3'line4";
+        var document = CreateValidDocument() with
+        {
+            Statements =
+            [
+                new Statement
+                {
+                    Vulnerability = new Vulnerability { Name = "CVE-2026-0001" },
+                    Products =
+                    [
+                        new Product
+                        {
+                            Identifiers = new Dictionary<string, string>
+                            {
+                                [key] = "value",
+                            },
+                        },
+                    ],
+                    Status = Status.Fixed,
+                },
+            ],
+        };
+
+        var error = document.Validate().Errors.Single(
+            candidate => candidate.Message.StartsWith("Unsupported identifier", StringComparison.Ordinal));
+
+        error.Path.Should().Be(
+            """$.statements[0].products[0].identifiers["line1\\line2\nline3\u0027line4"]""");
+        error.Path.Should().NotContain("\n");
+    }
+
+    [Fact]
+    public void Should_Return_Duplicate_Errors_In_Document_Order()
+    {
+        var statement = new Statement
+        {
+            Vulnerability = new Vulnerability { Name = "CVE-2026-0001" },
+            Status = Status.Fixed,
+        };
+        var document = CreateValidDocument() with
+        {
+            Statements =
+            [
+                statement,
+                statement with { },
+                new Statement
+                {
+                    Vulnerability = null!,
+                    Status = Status.Fixed,
+                },
+            ],
+        };
+
+        var result = document.Validate();
+
+        result.Errors.Select(error => error.Path).Should().Equal(
+            "$.statements[1]",
+            "$.statements[2].vulnerability");
     }
 
     [Fact]

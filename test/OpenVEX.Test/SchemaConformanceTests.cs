@@ -99,6 +99,23 @@ public class SchemaConformanceTests
         Evaluate(invalidIri).IsValid.Should().BeFalse();
     }
 
+    [Fact]
+    public void Should_Distinguish_Uri_And_Iri_Formats()
+    {
+        var invalidUri = GetMinimalDocument();
+        invalidUri["@context"] = "https://example.com/世界";
+
+        var encodedUri = GetMinimalDocument();
+        encodedUri["@context"] = "https://example.com/%E4%B8%96%E7%95%8C";
+
+        var unicodeIri = GetMinimalDocument();
+        unicodeIri["@id"] = "https://example.com/世界";
+
+        Evaluate(invalidUri).IsValid.Should().BeFalse();
+        Evaluate(encodedUri).IsValid.Should().BeTrue();
+        Evaluate(unicodeIri).IsValid.Should().BeTrue();
+    }
+
     private static JsonObject GetMinimalDocument() =>
         JsonNode.Parse(TestResources.Get("minimal.json"))!.AsObject();
 
