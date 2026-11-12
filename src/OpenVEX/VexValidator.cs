@@ -7,15 +7,17 @@ using System.Text.Json;
 /// </summary>
 internal static class VexValidator
 {
-    private static readonly HashSet<string> IdentifierNames = new(StringComparer.Ordinal)
-    {
+    private static readonly HashSet<string> IdentifierNames =
+    [
+        with(StringComparer.Ordinal),
         "purl",
         "cpe22",
         "cpe23",
-    };
+    ];
 
-    private static readonly HashSet<string> HashNames = new(StringComparer.Ordinal)
-    {
+    private static readonly HashSet<string> HashNames =
+    [
+        with(StringComparer.Ordinal),
         "md5",
         "sha1",
         "sha-256",
@@ -28,7 +30,7 @@ internal static class VexValidator
         "blake2s-256",
         "blake2b-256",
         "blake2b-512",
-    };
+    ];
 
     /// <summary>
     /// Checks an OpenVEX document.
@@ -526,7 +528,7 @@ internal static class VexValidator
     private sealed class ValidationContext
     {
         private readonly Dictionary<object, object> materializedCollections =
-            new(ReferenceEqualityComparer.Instance);
+            [with(ReferenceEqualityComparer.Instance)];
 
         public List<VexValidationError> Errors { get; } = [];
 
